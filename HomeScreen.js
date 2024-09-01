@@ -1,28 +1,35 @@
 import React, { useState, useEffect } from 'react';
-import { StyleSheet, Text, View, TouchableOpacity, SafeAreaView, Animated, Dimensions } from 'react-native';
+import { StyleSheet, Text, View, TouchableOpacity, Image, Dimensions, SafeAreaView, Animated, TouchableWithoutFeedback } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { useNavigation } from '@react-navigation/native';
+import { useNavigation, useFocusEffect } from '@react-navigation/native';
 
 export default function HomeScreen() {
   const [selectedOption, setSelectedOption] = useState('Activas');
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [userName, setUserName] = useState('');
+  const [userAvatar, setUserAvatar] = useState(null);
   const screenWidth = Dimensions.get('window').width;
   const drawerWidth = screenWidth * 0.5;
   const animatedValue = useState(new Animated.Value(-drawerWidth))[0];
-  const navigation = useNavigation(); // Hook para la navegación
+  const navigation = useNavigation();
 
-  useEffect(() => {
-    const fetchUserName = async () => {
-      const name = await AsyncStorage.getItem('userName');
-      if (name) {
-        setUserName(name);
-      }
-    };
+  useFocusEffect(
+    React.useCallback(() => {
+      const fetchUserData = async () => {
+        const name = await AsyncStorage.getItem('userName');
+        const avatar = await AsyncStorage.getItem('userAvatar');
+        if (name) {
+          setUserName(name);
+        }
+        if (avatar) {
+          setUserAvatar(avatar);
+        }
+      };
 
-    fetchUserName();
-  }, []);
+      fetchUserData();
+    }, [])
+  );
 
   const toggleMenu = () => {
     if (isMenuOpen) {
@@ -54,11 +61,12 @@ export default function HomeScreen() {
           <TouchableOpacity onPress={() => {/* Acción para la lupa */}}>
             <Ionicons name="search" size={28} color="black" />
           </TouchableOpacity>
-          <TouchableOpacity 
-            onPress={() => navigation.navigate('Profile')} // Navegación a ProfileScreen
-            style={styles.avatarIcon}
-          >
-            <Ionicons name="person-circle" size={35} color="black" />
+          <TouchableOpacity onPress={() => navigation.navigate('Profile')} style={styles.avatarIcon}>
+            {userAvatar ? (
+              <Image source={{ uri: userAvatar }} style={styles.avatar} />
+            ) : (
+              <Ionicons name="person-circle" size={35} color="black" />
+            )}
           </TouchableOpacity>
         </View>
       </View>
@@ -89,6 +97,13 @@ export default function HomeScreen() {
           ]}>Finalizadas</Text>
         </TouchableOpacity>
       </View>
+
+      {/* Overlay para cerrar el drawer */}
+      {isMenuOpen && (
+        <TouchableWithoutFeedback onPress={toggleMenu}>
+          <View style={styles.overlay} />
+        </TouchableWithoutFeedback>
+      )}
 
       {/* Drawer personalizado */}
       <Animated.View style={[styles.drawer, { transform: [{ translateX: animatedValue }], width: drawerWidth }]}>
@@ -126,6 +141,11 @@ const styles = StyleSheet.create({
   avatarIcon: {
     marginLeft: 8, // Espacio entre la lupa y el avatar
   },
+  avatar: {
+    width: 35,
+    height: 35,
+    borderRadius: 50,
+  },
   title: {
     fontSize: 20,
     fontWeight: 'bold',
@@ -161,6 +181,14 @@ const styles = StyleSheet.create({
   },
   inactiveText: {
     color: '#808080',
+  },
+  overlay: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    backgroundColor: 'rgba(0, 0, 0, 0.5)',
   },
   drawer: {
     position: 'absolute',
