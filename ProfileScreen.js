@@ -119,7 +119,6 @@ export default function ProfileScreen() {
     try {
       const auth = getAuth();
       await signOut(auth);
-      Alert.alert('Sesión cerrada', 'Has cerrado sesión exitosamente.');
       navigation.replace('Login');
     } catch (error) {
       Alert.alert('Error', 'Hubo un problema al cerrar sesión.');
@@ -154,9 +153,9 @@ export default function ProfileScreen() {
 
           {/* Sección de dirección */}
           <View style={styles.locationContainer}>
-            <Text style={styles.addressText}>Agregar dirección:</Text>
+            <Text style={styles.addressText}>Agregar dirección</Text>
             <TouchableOpacity onPress={handlePickLocation} style={styles.locationIcon}>
-              <Ionicons name="location-sharp" size={30} color="gray" />
+              <Ionicons name="location-sharp" size={30} color="green" />
             </TouchableOpacity>
           </View>
           {address ? <Text style={styles.addressText}>Dirección: {address}</Text> : null}
@@ -179,8 +178,8 @@ export default function ProfileScreen() {
             secureTextEntry
           />
           {error ? <Text style={styles.errorText}>{error}</Text> : null}
-          <TouchableOpacity style={styles.button} onPress={handleChangePassword}>
-            <Text style={styles.buttonText}>Cambiar Contraseña</Text>
+          <TouchableOpacity style={[styles.button, styles.changePasswordButton]} onPress={handleChangePassword}>
+            <Text style={styles.changePasswordButtonText}>Cambiar Contraseña</Text>
           </TouchableOpacity>
 
           {/* Botón para cerrar sesión */}
@@ -199,8 +198,8 @@ export default function ProfileScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    paddingHorizontal: 16,
-    justifyContent: 'center',
+    paddingHorizontal: 26,
+    justifyContent: 'flex-start',
     alignItems: 'center',
     backgroundColor: '#fff',
   },
@@ -208,6 +207,9 @@ const styles = StyleSheet.create({
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
+    // Agrega estas dos propiedades
+    flexDirection: 'column',
+    height: '100%',
   },
   loading: {
     width: 100,
@@ -221,13 +223,12 @@ const styles = StyleSheet.create({
   greeting: {
     fontSize: 24,
     fontWeight: 'bold',
-    marginBottom: 10,
+    marginBottom: 20,
   },
   email: {
     fontSize: 18,
     color: 'gray',
-    marginBottom: 20,
-    fontWeight: 'bold'
+    marginBottom: 30,
   },
   avatarContainer: {
     width: 100,
@@ -247,12 +248,13 @@ const styles = StyleSheet.create({
   locationContainer: {
     flexDirection: 'row',
     alignItems: 'center',
-    marginBottom: 20,
+    marginBottom: 10,
   },
   addressText: {
     fontSize: 16,
     color: 'gray',
-    paddingBottom: 10
+    paddingBottom: 5,
+    textAlign: 'center'
   },
   locationIcon: {
     marginLeft: 10,
@@ -286,10 +288,18 @@ const styles = StyleSheet.create({
     textAlign: 'center',
     fontSize: 16,
   },
+  changePasswordButton: {
+    backgroundColor: '#FFD900', 
+  },
+  changePasswordButtonText: {
+    color: '#454545', 
+    textAlign: 'center'
+  },
   versionLabel: {
     marginTop: 20,
     fontSize: 14,
     color: 'gray',
     textAlign: 'center',
+    paddingTop: 180
   },
 });
