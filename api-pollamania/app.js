@@ -5,7 +5,7 @@ const app = express();
 app.use(express.json()); // Para manejar peticiones JSON
 
 // Conexión a la base de datos MongoDB
-mongoose.connect('mongodb://localhost:27017/pollasdb', {
+mongoose.connect(process.env.MONGODB_URI || 'mongodb://localhost:27017/pollasdb', {
     useNewUrlParser: true,
     useUnifiedTopology: true,
 }).then(() => {
@@ -20,7 +20,7 @@ app.get('/', (req, res) => {
 });
 
 // Iniciar el servidor
-const PORT = 3000;
+const PORT = process.env.PORT || 3000;
 const routes = require('./routes');
 app.use(routes);
 app.listen(PORT, () => {
