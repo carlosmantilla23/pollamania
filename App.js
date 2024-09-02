@@ -7,6 +7,7 @@ import HomeScreen from './HomeScreen';
 import LoginScreen from './LoginScreen';
 import RegisterScreen from './RegisterScreen';
 import ProfileScreen from './ProfileScreen';
+import CreatePollaScreen from './CreatePollaScreen';
 import { auth } from './firebaseConfig';
 
 const Stack = createStackNavigator();
@@ -39,6 +40,7 @@ export default function App() {
         <Stack.Screen name="Register" component={RegisterScreen} options={{ headerShown: false }} />
         <Stack.Screen name="Home" component={HomeScreen} options={{ headerShown: false }} />
         <Stack.Screen name="Profile" component={ProfileScreen} options={{ title: 'Perfil' }} />
+        <Stack.Screen name="CreatePolla" component={CreatePollaScreen} options={{ headerShown: false }} />
       </Stack.Navigator>
     </NavigationContainer>
   );

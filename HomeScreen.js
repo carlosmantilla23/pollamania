@@ -9,6 +9,7 @@ export default function HomeScreen() {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [userName, setUserName] = useState('');
   const [userAvatar, setUserAvatar] = useState(null);
+  const [showTooltip, setShowTooltip] = useState(true);
   const screenWidth = Dimensions.get('window').width;
   const drawerWidth = screenWidth * 0.5;
   const animatedValue = useState(new Animated.Value(-drawerWidth))[0];
@@ -31,6 +32,11 @@ export default function HomeScreen() {
     }, [])
   );
 
+  useEffect(() => {
+    const tooltipTimer = setTimeout(() => setShowTooltip(false), 3000); // Oculta el tooltip después de 3 segundos
+    return () => clearTimeout(tooltipTimer); // Limpia el temporizador si el componente se desmonta
+  }, []);
+
   const toggleMenu = () => {
     if (isMenuOpen) {
       Animated.timing(animatedValue, {
@@ -46,6 +52,11 @@ export default function HomeScreen() {
         useNativeDriver: false,
       }).start();
     }
+  };
+
+  const handleFloatingButtonPress = () => {
+    setShowTooltip(false); // Oculta el tooltip si el usuario presiona el botón
+    navigation.navigate('CreatePolla');
   };
 
   return (
@@ -114,6 +125,21 @@ export default function HomeScreen() {
           </TouchableOpacity>
         </View>
       </Animated.View>
+
+      {/* Tooltip temporal */}
+      {showTooltip && (
+        <View style={styles.tooltip}>
+          <Text style={styles.tooltipText}>Crear nueva polla</Text>
+        </View>
+      )}
+
+      {/* Botón flotante */}
+      <TouchableOpacity
+        style={styles.floatingButton}
+        onPress={handleFloatingButtonPress}
+      >
+        <Ionicons name="add" size={32} color="white" />
+      </TouchableOpacity>
     </SafeAreaView>
   );
 }
@@ -215,5 +241,33 @@ const styles = StyleSheet.create({
   closeText: {
     fontSize: 16,
     color: '#1976d2',
+  },
+  floatingButton: {
+    position: 'absolute',
+    width: 60,
+    height: 60,
+    borderRadius: 30,
+    backgroundColor: '#DB143C', // Color del botón flotante
+    alignItems: 'center',
+    justifyContent: 'center',
+    right: 20,
+    bottom: 20,
+    elevation: 8,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.3,
+    shadowRadius: 4,
+  },
+  tooltip: {
+    position: 'absolute',
+    bottom: 90, // Colocado justo encima del botón flotante
+    right: 30, // Ajustado a la derecha del botón flotante
+    backgroundColor: 'rgba(0, 0, 0, 0.7)',
+    padding: 8,
+    borderRadius: 5,
+  },
+  tooltipText: {
+    color: 'white',
+    fontSize: 14,
   },
 });
