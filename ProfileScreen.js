@@ -198,8 +198,8 @@ export default function ProfileScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    paddingHorizontal: 26,
-    justifyContent: 'flex-start',
+    paddingHorizontal: 16,
+    justifyContent: 'center',
     alignItems: 'center',
     backgroundColor: '#fff',
   },
@@ -207,7 +207,6 @@ const styles = StyleSheet.create({
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
-    // Agrega estas dos propiedades
     flexDirection: 'column',
     height: '100%',
   },
@@ -251,24 +250,24 @@ const styles = StyleSheet.create({
     marginBottom: 10,
   },
   addressText: {
-    fontSize: 16,
-    color: 'gray',
+    fontSize: 12,
+    color: '#555',
     paddingBottom: 5,
-    textAlign: 'center'
+    textAlign: 'center',
   },
   locationIcon: {
     marginLeft: 10,
   },
   input: {
-    height: 40,
-    borderColor: '#555',
+    height: 50,
+    borderColor: '#D3D3D3',
     borderWidth: 1,
     marginBottom: 12,
-    paddingHorizontal: 8,
+    paddingHorizontal: 12,
     color: '#000',
-    width: '100%',
-    backgroundColor: '#fff',
-    borderRadius: 8,
+    width: '80%',
+    backgroundColor: '#F9F9F9',
+    borderRadius: 10,
   },
   errorText: {
     color: '#DB143C',
@@ -278,10 +277,10 @@ const styles = StyleSheet.create({
   },
   button: {
     backgroundColor: '#DB143C',
-    padding: 12,
-    borderRadius: 8,
-    width: '100%',
-    marginTop: 10,
+    padding: 14,
+    borderRadius: 10,
+    width: '80%',
+    marginTop: 20,
   },
   buttonText: {
     color: 'white',
@@ -289,17 +288,17 @@ const styles = StyleSheet.create({
     fontSize: 16,
   },
   changePasswordButton: {
-    backgroundColor: '#FFD900', 
+    backgroundColor: '#FFD900',
   },
   changePasswordButtonText: {
-    color: '#454545', 
-    textAlign: 'center'
+    color: '#454545',
+    textAlign: 'center',
   },
   versionLabel: {
     marginTop: 20,
     fontSize: 14,
     color: 'gray',
     textAlign: 'center',
-    paddingTop: 180
+    paddingTop: 180,
   },
 });

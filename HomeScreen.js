@@ -1,15 +1,17 @@
 import React, { useState, useEffect } from 'react';
-import { StyleSheet, Text, View, TouchableOpacity, Image, Dimensions, SafeAreaView, Animated, TouchableWithoutFeedback } from 'react-native';
+import { StyleSheet, Text, View, TouchableOpacity, Image, Dimensions, SafeAreaView, Animated, TouchableWithoutFeedback, FlatList } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useNavigation, useFocusEffect } from '@react-navigation/native';
+import LottieView from 'lottie-react-native'; // Importa LottieView
+import moment from 'moment'; // Para manejar fechas
 
 export default function HomeScreen() {
   const [selectedOption, setSelectedOption] = useState('Activas');
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [userName, setUserName] = useState('');
   const [userAvatar, setUserAvatar] = useState(null);
-  const [showTooltip, setShowTooltip] = useState(true);
+  const [pollas, setPollas] = useState([]); // Estado para las pollas
   const screenWidth = Dimensions.get('window').width;
   const drawerWidth = screenWidth * 0.5;
   const animatedValue = useState(new Animated.Value(-drawerWidth))[0];
@@ -20,22 +22,23 @@ export default function HomeScreen() {
       const fetchUserData = async () => {
         const name = await AsyncStorage.getItem('userName');
         const avatar = await AsyncStorage.getItem('userAvatar');
-        if (name) {
-          setUserName(name);
-        }
-        if (avatar) {
-          setUserAvatar(avatar);
-        }
+        const storedPollas = JSON.parse(await AsyncStorage.getItem('pollas')) || [];
+
+        if (name) setUserName(name);
+        if (avatar) setUserAvatar(avatar);
+        setPollas(storedPollas); // Carga las pollas desde AsyncStorage
       };
 
       fetchUserData();
     }, [])
   );
 
-  useEffect(() => {
-    const tooltipTimer = setTimeout(() => setShowTooltip(false), 3000); // Oculta el tooltip después de 3 segundos
-    return () => clearTimeout(tooltipTimer); // Limpia el temporizador si el componente se desmonta
-  }, []);
+  const deletePolla = async (index) => {
+    const updatedPollas = [...pollas];
+    updatedPollas.splice(index, 1);
+    setPollas(updatedPollas);
+    await AsyncStorage.setItem('pollas', JSON.stringify(updatedPollas));
+  };
 
   const toggleMenu = () => {
     if (isMenuOpen) {
@@ -55,9 +58,34 @@ export default function HomeScreen() {
   };
 
   const handleFloatingButtonPress = () => {
-    setShowTooltip(false); // Oculta el tooltip si el usuario presiona el botón
     navigation.navigate('CreatePolla');
   };
+
+  // Función para obtener las pollas filtradas según la opción seleccionada (Activas o Finalizadas)
+  const getFilteredPollas = () => {
+    const today = moment(); // Fecha actual
+
+    if (selectedOption === 'Activas') {
+      return pollas.filter(polla => moment(polla.endDate).isSameOrAfter(today)); // Pollas cuya fecha de fin es mayor o igual a la fecha actual
+    } else if (selectedOption === 'Finalizadas') {
+      return pollas.filter(polla => moment(polla.endDate).isBefore(today)); // Pollas cuya fecha de fin es anterior a la fecha actual
+    }
+    return pollas;
+  };
+
+  const renderPolla = ({ item, index }) => (
+    <View style={styles.pollaContainer}>
+      <Image source={{ uri: item.logo }} style={styles.logo} />
+      <View style={styles.pollaDetails}>
+        <Text style={styles.pollaName}>{item.pollaName || 'Nombre no disponible'}</Text>
+        <Text style={styles.pollaDate}>Inicio: {item.startDate || 'Fecha no disponible'}</Text>
+        <Text style={styles.pollaDate}>Fin: {item.endDate || 'Fecha no disponible'}</Text>
+      </View>
+      <TouchableOpacity onPress={() => deletePolla(index)}>
+        <Ionicons name="trash" size={28} color="red" />
+      </TouchableOpacity>
+    </View>
+  );
 
   return (
     <SafeAreaView style={styles.container}>
@@ -109,6 +137,29 @@ export default function HomeScreen() {
         </TouchableOpacity>
       </View>
 
+      {/* Mostrar animación si no hay pollas activas */}
+      {getFilteredPollas().length === 0 ? (
+        selectedOption === 'Activas' ? (
+          <View style={styles.emptyContainer}>
+            <LottieView
+              source={require('./assets/sad.json')} // Ruta al archivo sad.json
+              autoPlay
+              loop
+              style={styles.animation}
+            />
+            <Text style={styles.noPollasText}>No tienes pollas activas.</Text>
+          </View>
+        ) : (
+          <Text style={styles.noPollasText}>No hay pollas finalizadas.</Text>
+        )
+      ) : (
+        <FlatList
+          data={getFilteredPollas()}
+          renderItem={renderPolla}
+          keyExtractor={(item, index) => index.toString()}
+        />
+      )}
+
       {/* Overlay para cerrar el drawer */}
       {isMenuOpen && (
         <TouchableWithoutFeedback onPress={toggleMenu}>
@@ -126,12 +177,10 @@ export default function HomeScreen() {
         </View>
       </Animated.View>
 
-      {/* Tooltip temporal */}
-      {showTooltip && (
-        <View style={styles.tooltip}>
-          <Text style={styles.tooltipText}>Crear nueva polla</Text>
-        </View>
-      )}
+      {/* Tooltip siempre visible */}
+      <View style={styles.tooltip}>
+        <Text style={styles.tooltipText}>Crear nueva polla</Text>
+      </View>
 
       {/* Botón flotante */}
       <TouchableOpacity
@@ -161,11 +210,11 @@ const styles = StyleSheet.create({
   iconContainer: {
     flexDirection: 'row',
     alignItems: 'center',
-    width: 80, // Ancho fijo para garantizar el centrado
-    justifyContent: 'space-between', // Asegura que los íconos estén separados
+    width: 80,
+    justifyContent: 'space-between',
   },
   avatarIcon: {
-    marginLeft: 8, // Espacio entre la lupa y el avatar
+    marginLeft: 8,
   },
   avatar: {
     width: 35,
@@ -208,6 +257,36 @@ const styles = StyleSheet.create({
   inactiveText: {
     color: '#808080',
   },
+  noPollasText: {
+    fontSize: 18,
+    textAlign: 'center',
+    marginTop: 20,
+    color: '#888',
+  },
+  pollaContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#f9f9f9',
+    marginBottom: 15,
+    padding: 15,
+    borderRadius: 10,
+  },
+  logo: {
+    width: 70,
+    height: 70,
+    marginRight: 15,
+  },
+  pollaDetails: {
+    flex: 1,
+  },
+  pollaName: {
+    fontSize: 18,
+    fontWeight: 'bold',
+  },
+  pollaDate: {
+    fontSize: 16,
+    color: '#555',
+  },
   overlay: {
     position: 'absolute',
     top: 0,
@@ -247,7 +326,7 @@ const styles = StyleSheet.create({
     width: 60,
     height: 60,
     borderRadius: 30,
-    backgroundColor: '#DB143C', // Color del botón flotante
+    backgroundColor: '#DB143C',
     alignItems: 'center',
     justifyContent: 'center',
     right: 20,
@@ -260,8 +339,8 @@ const styles = StyleSheet.create({
   },
   tooltip: {
     position: 'absolute',
-    bottom: 90, // Colocado justo encima del botón flotante
-    right: 30, // Ajustado a la derecha del botón flotante
+    bottom: 90,
+    right: 30,
     backgroundColor: 'rgba(0, 0, 0, 0.7)',
     padding: 8,
     borderRadius: 5,
@@ -269,5 +348,14 @@ const styles = StyleSheet.create({
   tooltipText: {
     color: 'white',
     fontSize: 14,
+  },
+  emptyContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  animation: {
+    width: 200,
+    height: 200,
   },
 });
