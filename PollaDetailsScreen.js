@@ -1,6 +1,6 @@
-import React, { useState, useEffect } from 'react';
-import { StyleSheet, Text, View, TouchableOpacity, SafeAreaView, FlatList, Image, ActivityIndicator } from 'react-native';
-import { Ionicons } from 'react-native-vector-icons';
+import React, { useState, useEffect, useRef } from 'react';
+import { StyleSheet, Text, View, TouchableOpacity, SafeAreaView, FlatList, Image, ActivityIndicator, TextInput, Alert, Keyboard, InputAccessoryView, Platform } from 'react-native';
+import { Ionicons } from '@expo/vector-icons'; 
 import { useNavigation } from '@react-navigation/native';
 import axios from 'axios';
 import AsyncStorage from '@react-native-async-storage/async-storage';
@@ -9,17 +9,18 @@ import moment from 'moment';
 export default function PollaDetailsScreen({ route }) {
   const { polla } = route.params;
   const [selectedOption, setSelectedOption] = useState('Pronósticos');
-  const [matches, setMatches] = useState([]); // Estado para almacenar los partidos
-  const [groupedMatches, setGroupedMatches] = useState({}); // Estado para los partidos agrupados por fecha
-  const [loading, setLoading] = useState(true); // Estado para manejar el spinner de carga
-  const [avatar, setAvatar] = useState(null); // Estado para el avatar del usuario
+  const [matches, setMatches] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [avatar, setAvatar] = useState(null);
+  const [predictions, setPredictions] = useState({});
   const navigation = useNavigation();
 
-  // Clave de la API
   const API_KEY = 'a7dc71a764834be39770af7534b83db9';
+  const inputAccessoryViewID = 'inputAccessoryView1';
+
+  const inputRefs = useRef([]);
 
   useEffect(() => {
-    // Recuperar el avatar del usuario desde AsyncStorage
     const fetchUserAvatar = async () => {
       try {
         const storedAvatar = await AsyncStorage.getItem('userAvatar');
@@ -37,7 +38,7 @@ export default function PollaDetailsScreen({ route }) {
   useEffect(() => {
     const fetchMatches = async () => {
       try {
-        setLoading(true); // Inicia el spinner
+        setLoading(true);
         const leagueID = getLeagueID(polla.league);
         if (!leagueID) return;
 
@@ -45,34 +46,17 @@ export default function PollaDetailsScreen({ route }) {
           headers: { 'X-Auth-Token': API_KEY },
         });
 
-        // Filtrar partidos que no estén en estado 'FINISHED' ni 'SCHEDULED'
         const remainingMatches = response.data.matches.filter(match => match.status !== 'FINISHED' && match.status !== 'SCHEDULED');
         setMatches(remainingMatches);
-
-        // Agrupar partidos por fecha
-        const grouped = groupMatchesByDate(remainingMatches);
-        setGroupedMatches(grouped);
       } catch (error) {
         console.error('Error al obtener los partidos:', error);
       } finally {
-        setLoading(false); // Detiene el spinner
+        setLoading(false);
       }
     };
 
     fetchMatches();
   }, [polla.league]);
-
-  // Función para agrupar partidos por fecha
-  const groupMatchesByDate = (matches) => {
-    return matches.reduce((groups, match) => {
-      const date = moment(match.utcDate).format('DD/MM/YYYY');
-      if (!groups[date]) {
-        groups[date] = [];
-      }
-      groups[date].push(match);
-      return groups;
-    }, {});
-  };
 
   const getLeagueID = (leagueName) => {
     const leagueIDs = {
@@ -84,36 +68,80 @@ export default function PollaDetailsScreen({ route }) {
     return leagueIDs[leagueName];
   };
 
-  const renderMatch = (match) => (
+  const handlePredictionChange = (matchId, team, value) => {
+    setPredictions(prevState => ({
+      ...prevState,
+      [matchId]: {
+        ...prevState[matchId],
+        [team]: value,
+      },
+    }));
+  };
+
+  const renderMatch = (match, index) => (
     <View key={match.id} style={styles.matchContainer}>
-      <View style={styles.teamContainer}>
-        <Image source={{ uri: match.homeTeam.crest }} style={styles.teamLogo} />
-        <Text style={styles.teamName}>{match.homeTeam.shortName}</Text>
+      <Text style={styles.matchDate}>{moment(match.utcDate).format('DD/MM/YYYY, HH:mm')}</Text>
+
+      <View style={styles.matchRow}>
+        <View style={styles.teamSection}>
+          <Image source={{ uri: match.homeTeam.crest }} style={styles.teamLogoLarge} />
+          <Text style={styles.teamNameLarge}>{match.homeTeam.shortName}</Text>
+        </View>
+
+        <View style={styles.scoreSection}>
+          <TextInput
+            style={styles.inputLarge}
+            placeholder="0"
+            keyboardType="numeric"
+            value={predictions[match.id]?.home || ''}
+            onChangeText={(value) => handlePredictionChange(match.id, 'home', value)}
+            returnKeyType="next"
+            ref={(el) => (inputRefs.current[index * 2] = el)}
+            inputAccessoryViewID={inputAccessoryViewID}
+          />
+          <Text style={styles.vsTextLarge}>-</Text>
+          <TextInput
+            style={styles.inputLarge}
+            placeholder="0"
+            keyboardType="numeric"
+            value={predictions[match.id]?.away || ''}
+            onChangeText={(value) => handlePredictionChange(match.id, 'away', value)}
+            returnKeyType={index === matches.length - 1 ? 'done' : 'next'}
+            ref={(el) => (inputRefs.current[index * 2 + 1] = el)}
+            inputAccessoryViewID={inputAccessoryViewID}
+          />
+        </View>
+
+        <View style={styles.teamSection}>
+          <Image source={{ uri: match.awayTeam.crest }} style={styles.teamLogoLarge} />
+          <Text style={styles.teamNameLarge}>{match.awayTeam.shortName}</Text>
+        </View>
       </View>
-      <Text style={styles.vsText}>vs</Text>
-      <View style={styles.teamContainer}>
-        <Image source={{ uri: match.awayTeam.crest }} style={styles.teamLogo} />
-        <Text style={styles.teamName}>{match.awayTeam.shortName}</Text>
-      </View>
-      <Text style={styles.matchDate}>Hora: {moment(match.utcDate).format('HH:mm')}</Text>
+
+      {/* InputAccessoryView para cerrar el teclado solo en iOS */}
+      {Platform.OS === 'ios' && (
+        <InputAccessoryView nativeID={inputAccessoryViewID}>
+          <View style={styles.accessory}>
+            <TouchableOpacity onPress={Keyboard.dismiss}>
+              <Text style={styles.doneButtonText}>Cerrar Teclado</Text>
+            </TouchableOpacity>
+          </View>
+        </InputAccessoryView>
+      )}
     </View>
   );
 
-  const renderGroupedMatches = ({ item: date }) => (
-    <View key={date}>
-      <Text style={styles.dateHeader}>Fecha: {date}</Text>
-      {groupedMatches[date].map((match) => renderMatch(match))}
-    </View>
-  );
+  const handleSavePredictions = () => {
+    Alert.alert('Éxito', 'Pronósticos registrados con éxito.');
+  };
 
   return (
     <SafeAreaView style={styles.container}>
       <View style={styles.header}>
-        <View style={styles.iconContainer}>
-          <TouchableOpacity>
-            <Ionicons name="menu" size={28} color="black" />
-          </TouchableOpacity>
-        </View>
+        {/* Icono de flecha para regresar */}
+        <TouchableOpacity onPress={() => navigation.goBack()}>
+          <Ionicons name="arrow-back" size={28} color="black" />
+        </TouchableOpacity>
 
         <View style={styles.titleContainer}>
           {polla.logo && (
@@ -123,7 +151,7 @@ export default function PollaDetailsScreen({ route }) {
         </View>
 
         <View style={styles.iconContainer}>
-          <TouchableOpacity onPress={() => {/* Acción para la lupa */}}>
+          <TouchableOpacity onPress={() => {}}>
             <Ionicons name="search" size={28} color="black" />
           </TouchableOpacity>
           <TouchableOpacity onPress={() => navigation.navigate('Profile')} style={styles.avatarIcon}>
@@ -171,15 +199,17 @@ export default function PollaDetailsScreen({ route }) {
       ) : (
         selectedOption === 'Pronósticos' && (
           <FlatList
-            data={Object.keys(groupedMatches)} // Las fechas agrupadas son las claves
-            renderItem={renderGroupedMatches}
-            keyExtractor={(item) => item} // Clave única para las fechas
+            data={matches}
+            renderItem={({ item, index }) => renderMatch(item, index)}
+            keyExtractor={(item) => item.id.toString()}
           />
         )
       )}
 
-      {selectedOption === 'Clasificación' && (
-        <Text>Clasificación de los usuarios</Text>
+      {selectedOption === 'Pronósticos' && (
+        <TouchableOpacity style={styles.saveButton} onPress={handleSavePredictions}>
+          <Text style={styles.saveButtonText}>Registrar Pronósticos</Text>
+        </TouchableOpacity>
       )}
     </SafeAreaView>
   );
@@ -189,7 +219,7 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     paddingHorizontal: 16,
-    backgroundColor: '#fff',
+    backgroundColor: '#f4f4f8',
   },
   header: {
     flexDirection: 'row',
@@ -210,10 +240,11 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   title: {
-    fontSize: 20,
+    fontSize: 22,
     fontWeight: 'bold',
     textAlign: 'center',
     marginLeft: 8,
+    color: '#333',
   },
   logo: {
     width: 30,
@@ -256,41 +287,58 @@ const styles = StyleSheet.create({
     color: '#808080',
   },
   matchContainer: {
-    padding: 10,
-    marginVertical: 5,
-    backgroundColor: '#f9f9f9',
-    borderRadius: 8,
+    backgroundColor: '#ffffff',
+    padding: 16,
+    marginVertical: 8,
+    borderRadius: 12,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+  },
+  matchRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
   },
-  teamContainer: {
-    flexDirection: 'row',
+  teamSection: {
     alignItems: 'center',
+    flex: 1,
   },
-  teamLogo: {
-    width: 30,
-    height: 30,
-    marginRight: 10,
+  teamLogoLarge: {
+    width: 50,
+    height: 50,
+    marginTop: -10,
   },
-  teamName: {
-    fontSize: 16,
-    fontWeight: 'bold',
-    flexShrink: 1, // Ajuste para que los nombres largos no rompan el diseño
-  },
-  vsText: {
+  teamNameLarge: {
     fontSize: 16,
     fontWeight: 'bold',
     color: '#333',
+    textAlign: 'center',
+  },
+  scoreSection: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  inputLarge: {
+    width: 50,
+    height: 50,
+    borderColor: '#ddd',
+    borderWidth: 1,
+    textAlign: 'center',
+    borderRadius: 12,
+    fontSize: 18,
+    backgroundColor: '#f9f9f9',
+    marginHorizontal: 10,
+  },
+  vsTextLarge: {
+    fontSize: 18,
+    fontWeight: 'bold',
+    color: '#555',
   },
   matchDate: {
     fontSize: 14,
-    color: '#555',
-  },
-  dateHeader: {
-    fontSize: 18,
-    fontWeight: 'bold',
-    marginVertical: 10,
+    color: '#888',
     textAlign: 'center',
   },
   loadingContainer: {
@@ -302,5 +350,31 @@ const styles = StyleSheet.create({
     marginTop: 10,
     fontSize: 16,
     color: 'gray',
+  },
+  saveButton: {
+    backgroundColor: '#DB143C',
+    padding: 15,
+    borderRadius: 8,
+    marginTop: 20,
+    alignItems: 'center',
+    marginHorizontal: 16,
+  },
+  saveButtonText: {
+    color: 'white',
+    fontSize: 16,
+    fontWeight: 'bold',
+  },
+  accessory: {
+    backgroundColor: '#f4f4f8',
+    padding: 8,
+    borderTopColor: '#ddd',
+    borderTopWidth: 1,
+    alignItems: 'flex-end',
+  },
+  doneButtonText: {
+    color: '#007AFF',
+    fontSize: 16,
+    fontWeight: '600',
+    marginRight: 10,
   },
 });
