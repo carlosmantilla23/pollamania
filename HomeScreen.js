@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { StyleSheet, Text, View, TouchableOpacity, Image, Dimensions, SafeAreaView, Animated, TouchableWithoutFeedback, FlatList } from 'react-native';
+import { StyleSheet, Text, View, TouchableOpacity, Image, Dimensions, SafeAreaView, Animated, TouchableWithoutFeedback, FlatList, Share } from 'react-native'; // Importa Share
 import { Ionicons } from '@expo/vector-icons';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useNavigation, useFocusEffect } from '@react-navigation/native';
@@ -40,6 +40,36 @@ export default function HomeScreen() {
     await AsyncStorage.setItem('pollas', JSON.stringify(updatedPollas));
   };
 
+  const handleSelectPolla = (item) => {
+    // Recupera la imagen de perfil almacenada
+    const fetchAvatar = async () => {
+      const avatar = await AsyncStorage.getItem('userAvatar');
+      navigation.navigate('PollaDetails', { polla: item, avatar }); // Pasa el avatar junto con los detalles de la polla
+    };
+  
+    fetchAvatar();
+  };
+
+  const handleSharePolla = async (polla) => {
+    try {
+      const result = await Share.share({
+        message: `¡Participa en mi polla de fútbol "${polla.pollaName}" en ${polla.league}! Comienza el ${polla.startDate} y finaliza el ${polla.endDate}.`,
+      });
+
+      if (result.action === Share.sharedAction) {
+        if (result.activityType) {
+          // Compartido con una actividad específica
+        } else {
+          // Compartido
+        }
+      } else if (result.action === Share.dismissedAction) {
+        // Cancelado
+      }
+    } catch (error) {
+      alert('Error al compartir la polla: ' + error.message);
+    }
+  };
+
   const toggleMenu = () => {
     if (isMenuOpen) {
       Animated.timing(animatedValue, {
@@ -61,30 +91,33 @@ export default function HomeScreen() {
     navigation.navigate('CreatePolla');
   };
 
-  // Función para obtener las pollas filtradas según la opción seleccionada (Activas o Finalizadas)
   const getFilteredPollas = () => {
     const today = moment(); // Fecha actual
-
     if (selectedOption === 'Activas') {
-      return pollas.filter(polla => moment(polla.endDate).isSameOrAfter(today)); // Pollas cuya fecha de fin es mayor o igual a la fecha actual
+      return pollas.filter(polla => moment(polla.endDate).isSameOrAfter(today));
     } else if (selectedOption === 'Finalizadas') {
-      return pollas.filter(polla => moment(polla.endDate).isBefore(today)); // Pollas cuya fecha de fin es anterior a la fecha actual
+      return pollas.filter(polla => moment(polla.endDate).isBefore(today));
     }
     return pollas;
   };
 
   const renderPolla = ({ item, index }) => (
-    <View style={styles.pollaContainer}>
+    <TouchableOpacity onPress={() => handleSelectPolla(item)} style={styles.pollaContainer}>
       <Image source={{ uri: item.logo }} style={styles.logo} />
       <View style={styles.pollaDetails}>
         <Text style={styles.pollaName}>{item.pollaName || 'Nombre no disponible'}</Text>
         <Text style={styles.pollaDate}>Inicio: {item.startDate || 'Fecha no disponible'}</Text>
         <Text style={styles.pollaDate}>Fin: {item.endDate || 'Fecha no disponible'}</Text>
       </View>
-      <TouchableOpacity onPress={() => deletePolla(index)}>
-        <Ionicons name="trash" size={28} color="red" />
-      </TouchableOpacity>
-    </View>
+      <View style={styles.iconActions}>
+        <TouchableOpacity onPress={() => handleSharePolla(item)}>
+          <Ionicons name="share-social" size={28} color="blue" />
+        </TouchableOpacity>
+        <TouchableOpacity onPress={() => deletePolla(index)}>
+          <Ionicons name="trash" size={28} color="red" />
+        </TouchableOpacity>
+      </View>
+    </TouchableOpacity>
   );
 
   return (
@@ -137,7 +170,6 @@ export default function HomeScreen() {
         </TouchableOpacity>
       </View>
 
-      {/* Mostrar animación si no hay pollas activas */}
       {getFilteredPollas().length === 0 ? (
         selectedOption === 'Activas' ? (
           <View style={styles.emptyContainer}>
@@ -160,14 +192,12 @@ export default function HomeScreen() {
         />
       )}
 
-      {/* Overlay para cerrar el drawer */}
       {isMenuOpen && (
         <TouchableWithoutFeedback onPress={toggleMenu}>
           <View style={styles.overlay} />
         </TouchableWithoutFeedback>
       )}
 
-      {/* Drawer personalizado */}
       <Animated.View style={[styles.drawer, { transform: [{ translateX: animatedValue }], width: drawerWidth }]}>
         <View style={styles.drawerContent}>
           <Text style={styles.drawerText}>Bienvenido, {userName}</Text>
@@ -177,12 +207,10 @@ export default function HomeScreen() {
         </View>
       </Animated.View>
 
-      {/* Tooltip siempre visible */}
       <View style={styles.tooltip}>
         <Text style={styles.tooltipText}>Crear nueva polla</Text>
       </View>
 
-      {/* Botón flotante */}
       <TouchableOpacity
         style={styles.floatingButton}
         onPress={handleFloatingButtonPress}
@@ -286,6 +314,11 @@ const styles = StyleSheet.create({
   pollaDate: {
     fontSize: 16,
     color: '#555',
+  },
+  iconActions: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
   },
   overlay: {
     position: 'absolute',
