@@ -1,10 +1,10 @@
 import React, { useState, useEffect } from 'react';
-import { StyleSheet, Text, View, TextInput, TouchableOpacity, SafeAreaView, Image, Alert } from 'react-native';
+import { StyleSheet, Text, View, TextInput, TouchableOpacity, SafeAreaView, Image, Alert, StatusBar, Platform } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
-import RNPickerSelect from 'react-native-picker-select';
+import { Picker } from '@react-native-picker/picker';
 import AsyncStorage from '@react-native-async-storage/async-storage'; // Importa AsyncStorage
 import axios from 'axios';
-import { Ionicons } from '@expo/vector-icons';
+import { Ionicons } from '@expo/vector-icons'; // Para el botón de regresar
 
 export default function CreatePollaScreen() {
   const [pollaName, setPollaName] = useState('');
@@ -84,49 +84,58 @@ export default function CreatePollaScreen() {
 
   return (
     <SafeAreaView style={styles.container}>
-      <Text style={styles.title}>Crear Nueva Polla</Text>
+      {/* Ajuste para asegurar el espacio debajo de la barra de estado */}
+      <StatusBar barStyle={Platform.OS === 'ios' ? 'dark-content' : 'default'} />
 
-      <Text style={styles.label}>Nombre de la Polla</Text>
-      <TextInput
-        style={styles.input}
-        placeholder="Nombre de la Polla"
-        value={pollaName}
-        onChangeText={setPollaName}
-      />
-
-      <Text style={styles.label}>Liga</Text>
-      <View style={styles.dropdownContainer}>
-        <RNPickerSelect
-          onValueChange={(value) => setSelectedLeague(value)}
-          items={[
-            { label: 'UEFA Champions League', value: 'UEFA Champions League' },
-            { label: 'La Liga', value: 'La Liga' },
-            { label: 'Premier League', value: 'Premier League' },
-            { label: 'Serie A', value: 'Serie A' },
-          ]}
-          placeholder={{ label: 'Seleccionar Liga...', value: null }}
-          style={{ inputIOS: styles.dropdown, inputAndroid: styles.dropdown, iconContainer: styles.iconContainer }}
-          Icon={() => <Ionicons name="chevron-down" size={24} color="gray" />}
-        />
+      {/* Encabezado con botón de regresar */}
+      <View style={styles.header}>
+        <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButton}>
+          <Ionicons name="arrow-back" size={28} color="black" />
+        </TouchableOpacity>
+        <Text style={styles.title}>Crear Nueva Polla</Text>
       </View>
 
-      {leagueLogo && (
-        <View style={styles.logoContainer}>
-          <Image source={{ uri: leagueLogo }} style={styles.logo} />
+      <View style={styles.formContainer}>
+        <Text style={styles.label}>Nombre de la Polla</Text>
+        <TextInput
+          style={styles.input}
+          placeholder="Nombre de la Polla"
+          value={pollaName}
+          onChangeText={setPollaName}
+        />
+
+        <Text style={styles.label}>Liga</Text>
+        <View style={styles.dropdownContainer}>
+          <Picker
+            selectedValue={selectedLeague}
+            onValueChange={(value) => setSelectedLeague(value)}
+          >
+            <Picker.Item label="Selecciona una liga" value="" />
+            <Picker.Item label="UEFA Champions League" value="UEFA Champions League" />
+            <Picker.Item label="La Liga" value="La Liga" />
+            <Picker.Item label="Premier League" value="Premier League" />
+            <Picker.Item label="Serie A" value="Serie A" />
+          </Picker>
         </View>
-      )}
 
-      <Text style={styles.label}>Fecha de Inicio</Text>
-      <TextInput style={styles.input} placeholder="Fecha de Inicio" value={startDate} editable={false} />
+        {leagueLogo && (
+          <View style={styles.logoContainer}>
+            <Image source={{ uri: leagueLogo }} style={styles.logo} />
+          </View>
+        )}
 
-      <Text style={styles.label}>Fecha de Fin</Text>
-      <TextInput style={styles.input} placeholder="Fecha de Fin" value={endDate} editable={false} />
+        <Text style={styles.label}>Fecha de Inicio</Text>
+        <TextInput style={styles.input} placeholder="Fecha de Inicio" value={startDate} editable={false} />
 
-      {error ? <Text style={styles.errorText}>{error}</Text> : null}
+        <Text style={styles.label}>Fecha de Fin</Text>
+        <TextInput style={styles.input} placeholder="Fecha de Fin" value={endDate} editable={false} />
 
-      <TouchableOpacity style={styles.button} onPress={handleCreatePolla}>
-        <Text style={styles.buttonText}>Crear Polla</Text>
-      </TouchableOpacity>
+        {error ? <Text style={styles.errorText}>{error}</Text> : null}
+
+        <TouchableOpacity style={styles.button} onPress={handleCreatePolla}>
+          <Text style={styles.buttonText}>Crear Polla</Text>
+        </TouchableOpacity>
+      </View>
     </SafeAreaView>
   );
 }
@@ -135,17 +144,32 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     paddingHorizontal: 16,
-    justifyContent: 'center',
-    alignItems: 'center',
     backgroundColor: '#fff',
+  },
+  header: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginTop: 10,
+    paddingTop: Platform.OS === 'android' ? 30 : 0, // Ajuste para Android
+    justifyContent: 'center', // Para centrar el título
+  },
+  backButton: {
+    position: 'absolute', // Posiciona el botón de regreso absolutamente
+    left: 10, // Alinea el botón de regreso a la izquierda
+    paddingTop: 0,
   },
   title: {
     fontSize: 24,
     fontWeight: 'bold',
-    marginBottom: 20,
+    textAlign: 'center',
+  },
+  formContainer: {
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginTop: 30,
   },
   label: {
-    fontSize: 12, // Tamaño pequeño
+    fontSize: 12,
     color: '#555',
     alignSelf: 'flex-start',
     marginLeft: '10%',
@@ -170,15 +194,6 @@ const styles = StyleSheet.create({
     marginBottom: 12,
     paddingHorizontal: 12,
     backgroundColor: '#F9F9F9',
-  },
-  dropdown: {
-    height: 50,
-    color: '#000',
-    paddingRight: 30,
-  },
-  iconContainer: {
-    top: 15,
-    right: 10,
   },
   logoContainer: {
     marginVertical: 20,

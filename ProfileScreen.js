@@ -222,7 +222,8 @@ const styles = StyleSheet.create({
   greeting: {
     fontSize: 24,
     fontWeight: 'bold',
-    marginBottom: 20,
+    paddingTop: 40,
+    marginBottom: 10,
   },
   email: {
     fontSize: 18,

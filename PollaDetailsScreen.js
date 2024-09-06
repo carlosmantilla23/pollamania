@@ -330,6 +330,7 @@ const styles = StyleSheet.create({
     fontSize: 18,
     backgroundColor: '#f9f9f9',
     marginHorizontal: 10,
+
   },
   vsTextLarge: {
     fontSize: 18,
@@ -358,6 +359,7 @@ const styles = StyleSheet.create({
     marginTop: 20,
     alignItems: 'center',
     marginHorizontal: 16,
+    marginBottom: Platform.OS === 'android' ? 20 : 16,
   },
   saveButtonText: {
     color: 'white',
