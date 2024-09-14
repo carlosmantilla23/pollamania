@@ -2,7 +2,11 @@ import React, { useState, useEffect } from 'react';
 import { StyleSheet, Text, View, TextInput, TouchableOpacity, SafeAreaView, Image, Alert, StatusBar, Platform } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import { Picker } from '@react-native-picker/picker';
-import AsyncStorage from '@react-native-async-storage/async-storage'; // Importa AsyncStorage
+import { getFirestore, collection, addDoc } from 'firebase/firestore';
+import { app } from './firebaseConfig'; // Importas la inicialización de Firebase
+
+const firestore = getFirestore(app);
+
 import axios from 'axios';
 import { Ionicons } from '@expo/vector-icons'; // Para el botón de regresar
 
@@ -16,7 +20,6 @@ export default function CreatePollaScreen() {
 
   const navigation = useNavigation();
 
-  // API key de Football-data.org
   const API_KEY = 'a7dc71a764834be39770af7534b83db9';
 
   const leagueIDs = {
@@ -47,33 +50,31 @@ export default function CreatePollaScreen() {
     }
   };
 
-  const savePolla = async () => {
+  const savePollaToFirestore = async () => {
     try {
-      const newPolla = {
+      // Guarda en Firestore usando el método correcto
+      await addDoc(collection(firestore, 'pollas'), {
         pollaName,
         startDate,
         endDate,
         league: selectedLeague,
         logo: leagueLogo,
-      };
-
-      const existingPollas = JSON.parse(await AsyncStorage.getItem('pollas')) || [];
-      existingPollas.push(newPolla);
-
-      await AsyncStorage.setItem('pollas', JSON.stringify(existingPollas));
+        createdAt: new Date(),
+      });
+  
+      Alert.alert('Polla creada exitosamente');
+      navigation.goBack();
     } catch (error) {
-      console.error('Error al guardar la polla:', error);
+      Alert.alert('Error al crear la polla', error.message);
     }
   };
-
+  
   const handleCreatePolla = async () => {
     if (!pollaName || !startDate || !endDate || !selectedLeague) {
       setError('Todos los campos son obligatorios.');
       return;
     }
-
-    await savePolla();
-    navigation.goBack();
+    await savePollaToFirestore(); // Guardar en Firestore
   };
 
   useEffect(() => {
@@ -84,10 +85,8 @@ export default function CreatePollaScreen() {
 
   return (
     <SafeAreaView style={styles.container}>
-      {/* Ajuste para asegurar el espacio debajo de la barra de estado */}
       <StatusBar barStyle={Platform.OS === 'ios' ? 'dark-content' : 'default'} />
 
-      {/* Encabezado con botón de regresar */}
       <View style={styles.header}>
         <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButton}>
           <Ionicons name="arrow-back" size={28} color="black" />
@@ -150,12 +149,12 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     marginTop: 10,
-    paddingTop: Platform.OS === 'android' ? 30 : 0, // Ajuste para Android
-    justifyContent: 'center', // Para centrar el título
+    paddingTop: Platform.OS === 'android' ? 30 : 0,
+    justifyContent: 'center',
   },
   backButton: {
-    position: 'absolute', // Posiciona el botón de regreso absolutamente
-    left: 10, // Alinea el botón de regreso a la izquierda
+    position: 'absolute',
+    left: 10,
     paddingTop: 0,
   },
   title: {

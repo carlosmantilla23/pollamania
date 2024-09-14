@@ -1,17 +1,19 @@
 import React, { useState, useEffect } from 'react';
-import { StyleSheet, Text, View, TouchableOpacity, Image, Dimensions, SafeAreaView, Animated, TouchableWithoutFeedback, FlatList, Share } from 'react-native'; // Importa Share
+import { StyleSheet, Text, View, TouchableOpacity, Image, Dimensions, SafeAreaView, Animated, TouchableWithoutFeedback, FlatList, Share } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useNavigation, useFocusEffect } from '@react-navigation/native';
-import LottieView from 'lottie-react-native'; // Importa LottieView
-import moment from 'moment'; // Para manejar fechas
+import LottieView from 'lottie-react-native';
+import moment from 'moment';
+import { collection, onSnapshot } from 'firebase/firestore'; 
+import { firestore } from './firebaseConfig'; 
 
 export default function HomeScreen() {
   const [selectedOption, setSelectedOption] = useState('Activas');
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [userName, setUserName] = useState('');
   const [userAvatar, setUserAvatar] = useState(null);
-  const [pollas, setPollas] = useState([]); // Estado para las pollas
+  const [pollas, setPollas] = useState([]); 
   const screenWidth = Dimensions.get('window').width;
   const drawerWidth = screenWidth * 0.5;
   const animatedValue = useState(new Animated.Value(-drawerWidth))[0];
@@ -20,13 +22,24 @@ export default function HomeScreen() {
   useFocusEffect(
     React.useCallback(() => {
       const fetchUserData = async () => {
-        const name = await AsyncStorage.getItem('userName');
-        const avatar = await AsyncStorage.getItem('userAvatar');
-        const storedPollas = JSON.parse(await AsyncStorage.getItem('pollas')) || [];
+        try {
+          const name = await AsyncStorage.getItem('userName');
+          const avatar = await AsyncStorage.getItem('userAvatar');
+          
+          // Usar onSnapshot para escuchar cambios en tiempo real en la colección "pollas"
+          const unsubscribe = onSnapshot(collection(firestore, 'pollas'), (querySnapshot) => {
+            const storedPollas = querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+            setPollas(storedPollas); // Actualiza las pollas en tiempo real
+          });
 
-        if (name) setUserName(name);
-        if (avatar) setUserAvatar(avatar);
-        setPollas(storedPollas); // Carga las pollas desde AsyncStorage
+          if (name) setUserName(name);
+          if (avatar) setUserAvatar(avatar);
+
+          // Devolver la función de "desuscripción" cuando el componente se desmonte
+          return () => unsubscribe();
+        } catch (error) {
+          console.error('Error al obtener los datos:', error);
+        }
       };
 
       fetchUserData();
@@ -41,12 +54,10 @@ export default function HomeScreen() {
   };
 
   const handleSelectPolla = (item) => {
-    // Recupera la imagen de perfil almacenada
     const fetchAvatar = async () => {
       const avatar = await AsyncStorage.getItem('userAvatar');
-      navigation.navigate('PollaDetails', { polla: item, avatar }); // Pasa el avatar junto con los detalles de la polla
+      navigation.navigate('PollaDetails', { polla: item, avatar });
     };
-  
     fetchAvatar();
   };
 
@@ -92,7 +103,7 @@ export default function HomeScreen() {
   };
 
   const getFilteredPollas = () => {
-    const today = moment(); // Fecha actual
+    const today = moment();
     if (selectedOption === 'Activas') {
       return pollas.filter(polla => moment(polla.endDate).isSameOrAfter(today));
     } else if (selectedOption === 'Finalizadas') {
@@ -174,7 +185,7 @@ export default function HomeScreen() {
         selectedOption === 'Activas' ? (
           <View style={styles.emptyContainer}>
             <LottieView
-              source={require('./assets/sad.json')} // Ruta al archivo sad.json
+              source={require('./assets/sad.json')} 
               autoPlay
               loop
               style={styles.animation}
